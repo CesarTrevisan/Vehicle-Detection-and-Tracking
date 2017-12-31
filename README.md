@@ -325,10 +325,9 @@ Example of result using Sliding Windows function:
 
 Parameters used:
 
-ystart = 400 # y start point
-ystop = 600 # y stop point
-scale = 1.5 # scale of windows
-
+**y start point:** 400
+**y stop point:** 400
+**scale of windows:** 1.5
 
 Then I defined a function to extract features using hog sub-sampling and make predictions
 
