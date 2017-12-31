@@ -21,9 +21,9 @@ The goals / steps of this project are the following:
 [spatial-binning]: ./writeup_images/spatial-binning.jpg
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
-###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
----
+Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+
 ## Writeup / README
 
 First, to find Cars in images, I got information related to color, saturation, and luminosity for each car and non car example extracting a histogram and use it to create a feature vector. Here is a example: 
@@ -35,10 +35,6 @@ like 'HSV', 'LUV', 'HLS', 'YUV', 'YCrCb'. In this function it's possible define 
 
 ![alt text][spatial-binning]
 
-
-I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
-
-![alt text][image1]
 
 ## Importing Data
 
@@ -63,9 +59,27 @@ In final version I used the full datase to train algorithm that contains:
  8968  examples of Non Cars
  
  ![alt text][image1]
+ 
+
+### Histogram of Oriented Gradients (HOG)
+
+Color Histograms do not capture information about shape of objetcs, so I compute a [Histogram of Oriented Gradient](http://scikit-image.org/docs/dev/auto_examples/features_detection/plot_hog.html) to extract this information and like I did with Color Histogram use it as feature to feed our classifier.
 
 
-###Histogram of Oriented Gradients (HOG)
+ # Define a function to return HOG features and visualization
+ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, feature_vec=True):
+     if vis == True:
+         # Extract features and Hog Image
+         features, hog_image = hog(img, orientations=orient, pixels_per_cell=(pix_per_cell, pix_per_cell),
+                                   cells_per_block=(cell_per_block, cell_per_block), transform_sqrt=False, 
+                                   visualise=True, feature_vector=False)
+         return features, hog_image
+     else:
+         # Extract features and Hog Image
+         features = hog(img, orientations=orient, pixels_per_cell=(pix_per_cell, pix_per_cell),
+                        cells_per_block=(cell_per_block, cell_per_block), transform_sqrt=False, 
+                        visualise=False, feature_vector=feature_vec)
+         return features
 
 ####1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
