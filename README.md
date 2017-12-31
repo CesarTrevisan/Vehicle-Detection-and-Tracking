@@ -539,7 +539,7 @@ def process_image(img):
 ```
 Result of process_image function
 
-![alt text][single_boxes]
+![alt text][single_boxes.png]
 
 ## Improving Car Detection
 
@@ -593,7 +593,7 @@ We can see that when we consider information from previous frame we get better a
 [Project Video on Youtube](https://youtu.be/Qh8H45vjTOA)
 
 
-[link to my video result](./project_output.mp4)
+[link to my video result](project_output.mp4)
 
 
 ---
