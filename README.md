@@ -17,16 +17,53 @@ The goals / steps of this project are the following:
 [image6]: ./examples/labels_map.png
 [image7]: ./examples/output_bboxes.png
 [video1]: ./project_video.mp4
+[histogram]: ./writeup_images/hist-compare.jpg
+[spatial-binning]: ./writeup_images/spatial-binning.jpg
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
 ###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
-###Writeup / README
+## Writeup / README
 
-####1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
+First, to find Cars in images, I got information related to color, saturation, and luminosity for each car and non car example extracting a histogram and use it to create a feature vector. Here is a example: 
 
-You're reading it!
+![alt text][histogram]
+
+After that, Define a function to compute color features, given a color_space flag as 3-letter all caps string
+like 'HSV', 'LUV', 'HLS', 'YUV', 'YCrCb'. In this function it's possible define a new size to reduce the total amount of features without lose relevant informations. Here is a example:
+
+![alt text][spatial-binning]
+
+
+I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
+
+![alt text][image1]
+
+## Importing Data
+
+To feed our algorithm we have two option of dataset: a Small used to test and tune the algorithm, and a full to create a more robust classifier.
+
+Data can be downloaded at,
+
+**Small Dataset:** 
+
+[Vehicles](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/vehicles_smallset.zip)
+[Non-Vehicles](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/non-vehicles_smallset.zip)
+
+**Full Dataset:**
+
+[Vehicles](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/vehicles.zip)
+[Non-Vehicles](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/non-vehicles.zip)
+
+
+In final version I used the full datase to train algorithm that contains: 
+
+ 8792  examples of Cars 
+ 8968  examples of Non Cars
+ 
+ ![alt text][image1]
+
 
 ###Histogram of Oriented Gradients (HOG)
 
@@ -34,9 +71,7 @@ You're reading it!
 
 The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
 
-I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 
-![alt text][image1]
 
 I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
 
