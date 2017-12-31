@@ -93,11 +93,28 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
                        visualise=False, feature_vector=feature_vec)
         return features
  ```
+ Here a example of HOG:
+ 
+ ![alt_text][car-and-hog]
+ 
+ ## Combine Features
+ 
+ To feed our classifier we need the most possible number of feature, in this project we'll use 3 types:
+
+* **Spatial Binning of Color:** which allow us perform a template match. This is not the best way because don't it takes into account changes of shape or variations, but still usefull to improve our algorithm.
+
+
+* **Color Histogram :** Capture signature of color, saturation and luminosity of car and non car examples.
+
+
+* **Histogram of Oriented Gradient:** Capture information about shape of car and non car examples.
+
+
+
+ Then I define a function to search cars given a image and a list of windowns, 
  
  ```python
  
- # Define a function you will pass an image 
-# and the list of windows to be searched (output of slide_windows())
 def search_windows(img, windows, clf, scaler, color_space='RGB', 
                     spatial_size=(32, 32), hist_bins=32, 
                     hist_range=(0, 256), orient=9, 
@@ -130,22 +147,19 @@ def search_windows(img, windows, clf, scaler, color_space='RGB',
 
 ```
 
-
-
 ## Building a Classifier
 
 To build a classifier, I follow the steps bellow:
 
-1. First define parameters
-2. Extratct Features
-3. Normalize Features
-4. Create a Train Dataset with Features (X) and Labels (y)
-5. Shufle the data
-6. Train a Classifier
-7. Score Classifier Performance
+* First define parameters
+* Extratct Features
+* Normalize Features
+* Create a Train Dataset with Features (X) and Labels (y)
+* Shufle the data
+* Train a Classifier
+* Score Classifier Performance
 
-
-
+---
 1. Parameter used:
 
 ```python
@@ -229,8 +243,6 @@ print(round(t2-t, 2), 'Seconds to train SVC...')
 
 ```
 
-it took:
-
 3248.62 Seconds to train SVC...
 Test Accuracy of SVC =  0.9862
 Support Vector Machine Best Parameters: 
@@ -246,11 +258,10 @@ t=time.time()
 
 ```
  Test Accuracy of SVC =  0.9862
- 
- 
- ## Sliding Windows
+  
+## Sliding Windows
 
-To find cars in each image or video frame, we'll implement a function to extract small portions (windows) of original image, using given parameters we'll able to define how windows will "sliding" through image, position, overlay and size.
+To find cars in each image or video frame, Iǘe implemented a function to extract small portions (windows) of original image, using given parameters we'll able to define how windows will "sliding" through image, position, overlay and size.
 
 ```python
 
@@ -308,15 +319,184 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
 
 
 ```
+Example of result using Sliding Windows function:
+
+![alt text][cars_found]
+
+Parameters used:
+
+ystart = 400 # y start point
+ystop = 600 # y stop point
+scale = 1.5 # scale of windows
 
 
+Then I defined a function to extract features using hog sub-sampling and make predictions
 
+```python
 
+def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
+    
+    draw_img = np.copy(img)
+    img = img.astype(np.float32)/255
+    
+    bbox_list=[]
+    
+    img_tosearch = img[ystart:ystop,:,:]
+    ctrans_tosearch = convert_color(img_tosearch, conv='RGB2YCrCb')
+    if scale != 1:
+        imshape = ctrans_tosearch.shape
+        ctrans_tosearch = cv2.resize(ctrans_tosearch, (np.int(imshape[1]/scale), np.int(imshape[0]/scale)))
+        
+    ch1 = ctrans_tosearch[:,:,0]
+    ch2 = ctrans_tosearch[:,:,1]
+    ch3 = ctrans_tosearch[:,:,2]
 
+    # Define blocks and steps as above
+    nxblocks = (ch1.shape[1] // pix_per_cell) - cell_per_block + 1
+    nyblocks = (ch1.shape[0] // pix_per_cell) - cell_per_block + 1 
+    nfeat_per_block = orient*cell_per_block**2
+    
+    # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
+    window = 64
+    nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
+    cells_per_step = 2  # Instead of overlap, define how many cells to step
+    nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
+    nysteps = (nyblocks - nblocks_per_window) // cells_per_step
+    
+    # Compute individual channel HOG features for the entire image
+    hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    
+    for xb in range(nxsteps):
+        for yb in range(nysteps):
+            ypos = yb*cells_per_step
+            xpos = xb*cells_per_step
+            # Extract HOG for this patch
+            hog_feat1 = hog1[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
+            hog_feat2 = hog2[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
+            hog_feat3 = hog3[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
+            hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
 
+            xleft = xpos*pix_per_cell
+            ytop = ypos*pix_per_cell
 
+            # Extract the image patch
+            subimg = cv2.resize(ctrans_tosearch[ytop:ytop+window, xleft:xleft+window], (64,64))
+          
+            # Get color features
+            spatial_features = bin_spatial(subimg, size=spatial_size)
+            hist_features = color_hist(subimg, nbins=hist_bins)
 
+            # Scale features and make a prediction
+            test_features = X_scaler.transform(np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1))    
+            #test_features = X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))    
+            test_prediction = svc.predict(test_features)
+            
+            if test_prediction == 1:
+                xbox_left = np.int(xleft*scale)
+                ytop_draw = np.int(ytop*scale)
+                win_draw = np.int(window*scale)
+                cv2.rectangle(draw_img,(xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart),(0,0,255),6) 
+                bbox_list.append(((xbox_left, ytop_draw+ystart), #github.com/preritj
+                                  (xbox_left+win_draw,ytop_draw+win_draw+ystart)))
+    
+    return draw_img, bbox_list
+```
 
+## Defining a mutiple_scale_find_cars
+
+Defining a optimized version of find_cars function, that get a list of parameters as argument and solve "perspective problem", in other words, cars appears smaller when they is far, and bigger when is near. So using a list of parameters our algorithm find cars using proper windows sizes in each vertical lane.
+
+![alt text][multiple_windows]
+
+```python
+
+# Define a function to find cars in multiple windows sizes
+def mutiple_scale_find_cars(img, list_ystart, list_ystop, list_scale):
+    
+    box_list = []
+    
+    # For each parameter in parameter lists (list_ystart, list_ystop, list_scale)
+    for start, stop, scale in zip( list_ystart, list_ystop, list_scale):
+    
+        out_img, box_temp = find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+        
+        # If car was found feed box list
+        if (len(box_temp) != 0):
+            box_list += box_temp
+    
+    return box_list
+```
+
+### Result of Multiple Scale Find Cars
+
+I've tested many parameters combinations, for the project I used the following parameters:
+
+| y start | y stop | window scale |
+|:-------:|:------:|:------------:|
+|   400   |   470  |    1.0       |
+|   410   |   480  |    1.0       |
+|   400   |   500  |    1.5       |
+|   430   |   530  |    1.5       |
+|   400   |   530  |    2.0       |
+|   430   |   560  |    2.0       |
+|   400   |   600  |    3.5       |
+|   460   |   700  |    3.5       |
+
+![alt text][boxes]
+
+## Draw a Single Box and Heatmap
+
+As we've seen in results above, our function draw many boxes if car were found more than one time, we can use that information to create a more robust method that can be able to exclude false positives and where a car were found with por confidence draw a unique box.
+
+To indentify the number and positions of cars found in heatmap we'll use [Scipy Label Function](https://docs.scipy.org/doc/scipy-0.16.0/reference/generated/scipy.ndimage.measurements.label.html) that will give and this information.
+
+Function to add "heat" in a heatmap where box were found
+
+```python
+
+def add_heat(heatmap, bbox_list):
+    # Iterate through list of bboxes
+    for box in bbox_list:
+        # Add += 1 for all pixels inside each bbox
+        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
+        heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
+
+    # Return updated heatmap
+    return heatmap# Iterate through list of bboxes
+
+```
+Function to clean areas where possible false positives were found
+
+```python
+
+def apply_threshold(heatmap, threshold):
+    # Zero out pixels below the threshold
+    heatmap[heatmap <= threshold] = 0
+    # Return thresholded map
+    return heatmap
+    
+```
+Function to Draw a single box, using scipy label function
+
+```python
+
+def draw_labeled_bboxes(img, labels):
+    # Iterate through all detected cars
+    for car_number in range(1, labels[1]+1):
+        # Find pixels with each car_number label value
+        nonzero = (labels[0] == car_number).nonzero()
+        # Identify x and y values of those pixels
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Define a bounding box based on min/max x and y
+        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        # Draw the box on the image
+        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+    # Return the image
+    return img
+```
 
 
  
