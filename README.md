@@ -17,7 +17,7 @@ The goals / steps of this project are the following:
 [image5]: ./examples/bboxes_and_heat.png
 [image6]: ./examples/labels_map.png
 [image7]: ./examples/output_bboxes.png
-[video1]: ./project_video.mp4
+[project_output]: ./projec_output.mp4
 [histogram]: ./writeup_images/hist-compare.jpg
 [spatial-binning]: ./writeup_images/spatial-binning.jpg
 [car-and-hog]: ./writeup_images/car-and-hog.jpg
@@ -498,181 +498,117 @@ def draw_labeled_bboxes(img, labels):
     return img
 ```
 
+Here a example of a Heatmap:
 
- 
- 
+![alt text][heatmap]
 
-####1. Explain how (and identify where in your code) you extracted HOG features from the training images.
+## Pipeline (put all peaces together)
 
-The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
+To indentify car in each image we need to perform all steps described above:
 
+1. Read a image
+2. Find Cars using multiple scale windows and get a Boxes List where they were found
+3. Using a Boxes List add heat in a heatmap
+4. Apply a Threshold to clean false positives
+5. Using Scipy Label function "locate and count" cars found
+6. Draw a single bounding box for each car found
 
-![alt text][car-and-hog]
-
-## Combine and Normalize Features
-
-To feed our classifier we need the most possible number of features, in this project I used use 3 types:
-
-* **Spatial Binning of Color:** which allow us perform a template match. This is not the best way because don't it takes into account changes of shape or variations, but still usefull to improve our algorithm.
-
-
-* **Color Histogram :** Capture signature of color, saturation and luminosity of car and non car examples.
-
-
-* **Histogram of Oriented Gradient:** Capture information about shape of car and non car examples.
-
-
-To use all this features I defined functions to extract each feature and one function to merge in one feature vector for image.
-
-
+To run the pipeline above I defined the following function:
 
 ```python
+def process_image(img):
+    
+    # Heat image like img
+    heat = np.zeros_like(img[:,:,0]).astype(np.float)
+    
+    # Get a boxes list
+    box_list = mutiple_scale_find_cars(img, list_ystart, list_ystop, list_scale)
+    
+    # Add heat to each box in box list
+    heat = add_heat(heat,box_list)
 
-# Define a function to compute binned color features  
-def bin_spatial(img, size=(32, 32)):
-    # Use cv2.resize().ravel() to create the feature vector
-    features = cv2.resize(img, size).ravel() 
-    # Return the feature vector
-    return features
+    # Apply threshold to help remove false positives
+    heat = apply_threshold(heat,1)
 
-```
+    # Visualize the heatmap when displaying    
+    heatmap = np.clip(heat, 0, 255)
 
-```python
-
-# Define a function to compute color histogram features  
-def color_hist(img, nbins=32, bins_range=(0, 256)):
-    # Compute the histogram of the color channels separately
-    channel1_hist = np.histogram(img[:,:,0], bins=nbins, range=bins_range)
-    channel2_hist = np.histogram(img[:,:,1], bins=nbins, range=bins_range)
-    channel3_hist = np.histogram(img[:,:,2], bins=nbins, range=bins_range)
-    # Concatenate the histograms into a single feature vector
-    hist_features = np.concatenate((channel1_hist[0], channel2_hist[0], channel3_hist[0]))
-    # Return the individual histograms, bin_centers and feature vector
-    return hist_features
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    draw_img = draw_labeled_bboxes(np.copy(img), labels)
+    
+    return draw_img  
     
 ```
+Result of process_image function
 
-Instead extract feature function, now we'll define a function to extract the 3 types of features from a single image and concatenate this features just one feature vector.
+![alt text][single_boxes]
 
-After that, we'll define a function that gives a list of windows looking for cars in each of them.
+## Improving Car Detection
+
+In project video using process_image function I get acceptable results, but with many "flickering" between video frames. So, 
+to improve this result and create a better and smoother detection system I used information from previous frame to analize actual frame image, this way our result will be a lot smoother and eventual false posives that apper in only one frame will be removed.
+
+Define a class to store data from video:
+
+```python
+class Vehicle_Detect():
+    def __init__(self):
+        # history of rectangles previous n frames
+        self.prev_rects = [] 
+        
+    def add_rects(self, rects):
+        self.prev_rects.append(rects)
+        if len(self.prev_rects) > 15:
+            # throw out oldest rectangle set(s)
+            self.prev_rects = self.prev_rects[len(self.prev_rects)-15:]
+ ```
+* Code for Class to store data from video was copied from [Je'remy Shannon's work](https://github.com/jeremy-shannon/CarND-Vehicle-Detection/blob/master/vehicle_detection_project.ipynb)
+
+Define a process frame for video:
 
 ```python
 
-def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
-                        hist_bins=32, orient=9, 
-                        pix_per_cell=8, cell_per_block=2, hog_channel=0,
-                        spatial_feat=True, hist_feat=True, hog_feat=True):    
-    #1) Define an empty list to receive features
-    img_features = []
-    #2) Apply color conversion if other than 'RGB'
-    if color_space != 'RGB':
-        if color_space == 'HSV':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-        elif color_space == 'LUV':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
-        elif color_space == 'HLS':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-        elif color_space == 'YUV':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
-        elif color_space == 'YCrCb':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
-    else: feature_image = np.copy(img)      
-    #3) Compute spatial features if flag is set
-    if spatial_feat == True:
-        spatial_features = bin_spatial(feature_image, size=spatial_size)
-        #4) Append features to list
-        img_features.append(spatial_features)
-    #5) Compute histogram features if flag is set
-    if hist_feat == True:
-        hist_features = color_hist(feature_image, nbins=hist_bins)
-        #6) Append features to list
-        img_features.append(hist_features)
-    #7) Compute HOG features if flag is set
-    if hog_feat == True:
-        if hog_channel == 'ALL':
-            hog_features = []
-            for channel in range(feature_image.shape[2]):
-                hog_features.extend(get_hog_features(feature_image[:,:,channel], 
-                                    orient, pix_per_cell, cell_per_block, 
-                                    vis=False, feature_vec=True))      
-        else:
-            hog_features = get_hog_features(feature_image[:,:,hog_channel], orient, 
-                        pix_per_cell, cell_per_block, vis=False, feature_vec=True)
-        #8) Append features to list
-        img_features.append(hog_features)
-
-    #9) Return concatenated array of features
-    return np.concatenate(img_features)
-    
+def process_frame_for_video(img):
+    
+    heat = np.zeros_like(img[:,:,0]).astype(np.float)
+    
+    # Get boxes list    
+    box_list = mutiple_scale_find_cars(img, list_ystart, list_ystop, list_scale)
+    
+    # add detections to the history
+    if len(box_list) > 0:
+        det.add_rects(box_list)
+    
+    heatmap_img = np.zeros_like(img[:,:,0])
+    for rect_set in det.prev_rects:
+        heatmap_img = add_heat(heatmap_img, rect_set)
+    heatmap_img = apply_threshold(heatmap_img, 1 + len(det.prev_rects)//2)
+     
+    labels = label(heatmap_img)
+    draw_img = draw_labeled_bboxes(np.copy(img), labels)
+    return draw_img
 ```
+## Final Output
 
-I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
+We can see that when consider information from previous frame we get better and smoother results.
 
-Here is an example using the `YCrCb` color space and HOG parameters of `orientations=8`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
-
-
-![alt text][image2]
-
-####2. Explain how you settled on your final choice of HOG parameters.
-
-I tried various combinations of parameters and...
-
-####3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
-
-I trained a linear SVM using...
-
-###Sliding Window Search
-
-####1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
-
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
-
-![alt text][image3]
-
-####2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
-
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
-
-![alt text][image4]
----
-
-### Video Implementation
-
-####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+[Project Video on Youtube](https://youtu.be/Qh8H45vjTOA)
 
 
-####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
-
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
-
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
-
-### Here are six frames and their corresponding heatmaps:
-
-![alt text][image5]
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
-
-
-### Final Video Output
-
-[Project Video](https://youtu.be/Qh8H45vjTOA)
-
-
+[link to my video result](./project_output.mp4)
 
 
 ---
 
-###Discussion
+### Discussion
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The approach worked well but I've noticed some false positives in project video, one way to avoid this is optmize the classifier using more examples and trying other algorithms and parameters. 
 
+The parameters used in Sliding Windows was defined with experimentation, a way to improving it could be using math and geometry to understand how (and how much variation) cars size changes with distance. 
+
+In improved algorithm I consider only **one** previous frame to create heatmap to actual image, use more frames can be a way to create a more robust algorithm, with more detection (more precise bounding box) and less false positives. 
 
 
