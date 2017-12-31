@@ -21,6 +21,15 @@ The goals / steps of this project are the following:
 [histogram]: ./writeup_images/hist-compare.jpg
 [spatial-binning]: ./writeup_images/spatial-binning.jpg
 [car-and-hog]: ./writeup_images/car-and-hog.jpg
+[boxes]: ./writeup_images/boxes.png
+[cars_found]: ./writeup_images/cars_found.png
+[heatmap]: ./writeup_images/heatmap.png
+[histogram2]: ./writeup_images/histogram.png
+[rgb-histogram-plot]: ./writeup_images/rgb-histogram-plot.jpg
+[scalar_fit]: ./writeup_images/scalar_fit.png
+[single_boxes]: ./writeup_images/single_boxes.png
+[sliding-window]: ./writeup_images/sliding-window.jpg
+[multiple_windows]: ./writeup_images/multiple_windows.png
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
 
