@@ -1,5 +1,6 @@
 ## **Vehicle Detection Project**
 
+
 The goals / steps of this project are the following:
 
 * Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
@@ -67,7 +68,7 @@ In final version I used the full datase to train algorithm that contains:
 Color Histograms do not capture information about shape of objetcs, so I compute a [Histogram of Oriented Gradient](http://scikit-image.org/docs/dev/auto_examples/features_detection/plot_hog.html) to extract this information and like I did with Color Histogram use it as feature to feed our classifier.
 
 
-'''python
+```python
 
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, feature_vec=True):
     if vis == True:
@@ -82,12 +83,13 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
                        cells_per_block=(cell_per_block, cell_per_block), transform_sqrt=False, 
                        visualise=False, feature_vector=feature_vec)
         return features
+ ```
 
 ####1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
 The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
 
-'''
+
 ![alt text][car-and-hog]
 
 ## Combine and Normalize Features
@@ -107,7 +109,7 @@ To use all this features I defined functions to extract each feature and one fun
 
 
 
-'''python
+```python
 
 # Define a function to compute binned color features  
 def bin_spatial(img, size=(32, 32)):
@@ -116,9 +118,9 @@ def bin_spatial(img, size=(32, 32)):
     # Return the feature vector
     return features
 
-'''
+```
 
-'''python
+```python
 
 # Define a function to compute color histogram features  
 def color_hist(img, nbins=32, bins_range=(0, 256)):
@@ -130,14 +132,14 @@ def color_hist(img, nbins=32, bins_range=(0, 256)):
     hist_features = np.concatenate((channel1_hist[0], channel2_hist[0], channel3_hist[0]))
     # Return the individual histograms, bin_centers and feature vector
     return hist_features
-    
-'''
+    
+```
 
 Instead extract feature function, now we'll define a function to extract the 3 types of features from a single image and concatenate this features just one feature vector.
 
 After that, we'll define a function that gives a list of windows looking for cars in each of them.
 
-'''python
+```python
 
 def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
                         hist_bins=32, orient=9, 
@@ -184,13 +186,8 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
 
     #9) Return concatenated array of features
     return np.concatenate(img_features)
-    
-'''
-    
-    
-    
-
-
+    
+```
 
 I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
 
