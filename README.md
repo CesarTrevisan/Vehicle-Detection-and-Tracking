@@ -109,8 +109,6 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
 
 * **Histogram of Oriented Gradient:** Capture information about shape of car and non car examples.
 
-
-
  Then I define a function to search cars given a image and a list of windowns, 
  
  ```python
@@ -403,7 +401,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, ce
     return draw_img, bbox_list
 ```
 
-## Defining a mutiple_scale_find_cars
+## Multiple Scale Windows
 
 Defining a optimized version of find_cars function, that get a list of parameters as argument and solve "perspective problem", in other words, cars appears smaller when they is far, and bigger when is near. So using a list of parameters our algorithm find cars using proper windows sizes in each vertical lane.
 
@@ -428,7 +426,7 @@ def mutiple_scale_find_cars(img, list_ystart, list_ystop, list_scale):
     return box_list
 ```
 
-### Result of Multiple Scale Find Cars
+### Result of Multiple Scale Find Cars function
 
 I've tested many parameters combinations, for the project I used the following parameters:
 
@@ -501,7 +499,7 @@ Here a example of a Heatmap:
 
 ![alt text][heatmap]
 
-## Pipeline (put all peaces together)
+## Pipeline (put all parts together)
 
 To indentify car in each image we need to perform all steps described above:
 
@@ -590,7 +588,7 @@ def process_frame_for_video(img):
 ```
 ## Final Output
 
-We can see that when consider information from previous frame we get better and smoother results.
+We can see that when we consider information from previous frame we get better and smoother results.
 
 [Project Video on Youtube](https://youtu.be/Qh8H45vjTOA)
 
@@ -601,8 +599,6 @@ We can see that when consider information from previous frame we get better and 
 ---
 
 ### Discussion
-
-####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
 The approach worked well but I've noticed some false positives in project video, one way to avoid this is optmize the classifier using more examples and trying other algorithms and parameters. 
 
